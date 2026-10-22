@@ -1,4 +1,5 @@
 import shlex
+import shutil
 import subprocess
 import os
 import argparse
@@ -75,6 +76,9 @@ class LazySeleniumAuthentication(SeleniumAuthentication):
             firefox_options=FirefoxOptions()
             firefox_options.add_argument("-headless")
             firefox_options.accept_insecure_certs = True
+            firefox_binary = shutil.which('firefox')
+            if firefox_binary:
+                firefox_options.binary_location = firefox_binary
             driver = webdriver_wire.Firefox(service=service,  options=firefox_options, seleniumwire_options=options)
         elif intercept:
             seleniumwireOptions = {}
@@ -94,10 +98,10 @@ def default_teamfiltration_filename():
         return 'TeamFiltration'
     
 def default_geckodriver_filename():
-    if platform.system() == 'Windows':
-        return 'geckodriver.exe'
-    else:
-        return 'geckodriver'
+    name = 'geckodriver.exe' if platform.system() == 'Windows' else 'geckodriver'
+    # Selenium >=4.11 rejects a bare driver name as "not a valid file"; resolve
+    # it to an absolute path on PATH when one exists.
+    return shutil.which(name) or name
 
 def is_dependency_present(binary_name):
     """
