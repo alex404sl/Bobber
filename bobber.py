@@ -311,7 +311,8 @@ def monitor_remote_database(remote_info, processed_combinations, args):
 
             time.sleep(5)
 
-if __name__ == "__main__":
+def main():
+    global pushClient
     # ASCII Banner
     banner = """                                        
                                          ▓▓                                                         
@@ -429,3 +430,7 @@ if __name__ == "__main__":
                 with ThreadPoolExecutor() as executor:
                     executor.submit(execute_authentication, tokenData, key.split(':')[0], args.resource, args.client, args.redirect_url, args.driver_path, args.tf_path, args.keep_open)
             time.sleep(5000)
+
+
+if __name__ == "__main__":
+    main()
