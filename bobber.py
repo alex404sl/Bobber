@@ -19,6 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from selenium import webdriver
 from seleniumwire import webdriver as webdriver_wire
+from seleniumwire.webdriver import FirefoxOptions
 
 # Import only necessary modules from roadtools.roadlib
 from roadtools.roadlib.auth import Authentication
@@ -71,8 +72,9 @@ class LazySeleniumAuthentication(SeleniumAuthentication):
 
         options = {'request_storage': 'memory'}
         if intercept and self.headless:
-            firefox_options=self.FirefoxOptions()
+            firefox_options=FirefoxOptions()
             firefox_options.add_argument("-headless")
+            firefox_options.accept_insecure_certs = True
             driver = webdriver_wire.Firefox(service=service,  options=firefox_options, seleniumwire_options=options)
         elif intercept:
             seleniumwireOptions = {}
@@ -158,7 +160,7 @@ def download_remote_file(ssh, remote_file, local_file):
     except Exception as e:
         print(f"{ERROR_ICON} Failed to download file: {e}")
 
-def execute_authentication(estscookie, username, resourceUri, clientId, redirectUrl, geckoDriverPath, teamFiltrationPath, keepOpen):
+def execute_authentication(estscookie, username, resourceUri, clientId, redirectUrl, geckoDriverPath, teamFiltrationPath, keepOpen, headless=False):
     # Attempt to execute the authentication process
     try:
         # Informing the user about the start of the process
@@ -178,7 +180,7 @@ def execute_authentication(estscookie, username, resourceUri, clientId, redirect
         deviceAuthObject.verify = False
         
         # Initialize lazy selenium authentication object
-        selAuthObject = LazySeleniumAuthentication(authObject, deviceAuthObject, redirectUrl, None)
+        selAuthObject = LazySeleniumAuthentication(authObject, deviceAuthObject, redirectUrl, None, headless=headless)
        
         # Build the authentication URL
         authUrl = authObject.build_auth_url(redirectUrl, 'code', None)
@@ -304,7 +306,7 @@ def monitor_remote_database(remote_info, processed_combinations, args):
                     new_combinations = process_combinations(valid_json_objects, processed_combinations)
                     for key, tokenData in new_combinations.items():
                         with ThreadPoolExecutor() as executor:
-                            executor.submit(execute_authentication, tokenData, key.split(':')[0], args.resource, args.client, args.redirect_url, args.driver_path, args.tf_path, args.keep_open)
+                            executor.submit(execute_authentication, tokenData, key.split(':')[0], args.resource, args.client, args.redirect_url, args.driver_path, args.tf_path, args.keep_open, args.headless)
                           
             except Exception as e:
                 print(f"{ERROR_ICON} Error monitoring remote file: {e}")
@@ -376,6 +378,7 @@ def main():
     roadtools_group.add_argument('-t','--tenant',action='store',help='Tenant ID or domain to auth to',required=False)
     roadtools_group.add_argument('-d', '--driver-path',action='store',help='Path to geckodriver file on disk (download from: https://github.com/mozilla/geckodriver/releases/latest)',default=default_geckodriver_filename())
     roadtools_group.add_argument('-k', '--keep-open', action='store_true', help='Do not close the browser window after timeout. Useful if you want to browse online apps with the obtained credentials')
+    roadtools_group.add_argument('--headless', action='store_true', help='Run Firefox in headless mode (no display required)')
     
     args = arg_parser.parse_args()
     processed_combinations = set()
@@ -428,8 +431,8 @@ def main():
             initial_combinations = process_combinations(valid_json_objects, processed_combinations)
             for key, tokenData in initial_combinations.items():
                 with ThreadPoolExecutor() as executor:
-                    executor.submit(execute_authentication, tokenData, key.split(':')[0], args.resource, args.client, args.redirect_url, args.driver_path, args.tf_path, args.keep_open)
-            time.sleep(5000)
+                    executor.submit(execute_authentication, tokenData, key.split(':')[0], args.resource, args.client, args.redirect_url, args.driver_path, args.tf_path, args.keep_open, args.headless)
+            time.sleep(5)
 
 
 if __name__ == "__main__":
